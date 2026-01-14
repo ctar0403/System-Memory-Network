@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <cstring>
+#include <string>
+#include <cstdint>
 
 #ifdef __linux__
 #include <unistd.h>
@@ -9,6 +11,7 @@
 #endif
 
 #include "timer.h"
+#include "memory_benchmark.h"
 
 /**
  * System Benchmarking Tool
@@ -21,7 +24,16 @@
  *   cmake --build .
  * 
  * Run Instructions:
- *   ./SystemBenchmark
+ *   ./SystemBenchmark [--buffer-size SIZE] [--iterations COUNT]
+ * 
+ * Options:
+ *   --buffer-size SIZE    Buffer size in bytes (default: 1048576 = 1MB)
+ *   --iterations COUNT    Number of iterations (default: 1000)
+ *   --help                Show this help message
+ * 
+ * Examples:
+ *   ./SystemBenchmark --buffer-size 1048576 --iterations 10000
+ *   ./SystemBenchmark --buffer-size 10485760 --iterations 1000000
  * 
  * For Android (cross-compilation):
  *   cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/android.toolchain.cmake ..
@@ -82,16 +94,92 @@ namespace {
         
         std::cout << "\n";
     }
+    
+    void print_usage(const char* program_name) {
+        std::cout << "Usage: " << program_name 
+                  << " [--buffer-size SIZE] [--iterations COUNT] [--help]\n";
+        std::cout << "\n";
+        std::cout << "Options:\n";
+        std::cout << "  --buffer-size SIZE    Buffer size in bytes (default: 1048576 = 1MB)\n";
+        std::cout << "  --iterations COUNT    Number of iterations (default: 1000)\n";
+        std::cout << "  --help                Show this help message\n";
+        std::cout << "\n";
+        std::cout << "Examples:\n";
+        std::cout << "  " << program_name << " --buffer-size 1048576 --iterations 10000\n";
+        std::cout << "  " << program_name << " --buffer-size 10485760 --iterations 1000000\n";
+        std::cout << "\n";
+    }
+    
+    std::size_t parse_size_t(const char* str, const char* option_name) {
+        try {
+            unsigned long long value = std::stoull(str);
+            if (value == 0) {
+                std::cerr << "Error: " << option_name 
+                          << " must be greater than 0\n";
+                return 0;
+            }
+            return static_cast<std::size_t>(value);
+        } catch (const std::exception& e) {
+            std::cerr << "Error: Invalid value for " << option_name 
+                      << ": " << str << "\n";
+            return 0;
+        }
+    }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    // Default values
+    std::size_t buffer_size = 1048576;  // 1 MB
+    std::size_t iterations = 1000;
+    bool run_benchmark = false;
+    
+    // Parse command line arguments
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        
+        if (arg == "--help" || arg == "-h") {
+            print_banner();
+            print_usage(argv[0]);
+            return EXIT_SUCCESS;
+        } else if (arg == "--buffer-size" && i + 1 < argc) {
+            buffer_size = parse_size_t(argv[++i], "--buffer-size");
+            if (buffer_size == 0) {
+                return EXIT_FAILURE;
+            }
+            run_benchmark = true;
+        } else if (arg == "--iterations" && i + 1 < argc) {
+            iterations = parse_size_t(argv[++i], "--iterations");
+            if (iterations == 0) {
+                return EXIT_FAILURE;
+            }
+            run_benchmark = true;
+        } else {
+            std::cerr << "Error: Unknown option: " << arg << "\n";
+            std::cerr << "Use --help for usage information.\n";
+            return EXIT_FAILURE;
+        }
+    }
+    
     print_banner();
     print_environment_info();
     
-    std::cout << "Benchmarking framework initialized.\n";
-    std::cout << "Ready for benchmark implementations.\n";
-    std::cout << "\n";
-    
-    return EXIT_SUCCESS;
+    // Run memory benchmark if parameters provided, otherwise show help
+    if (run_benchmark) {
+        std::cout << "Running RAM Benchmark...\n";
+        std::cout << "Buffer Size: " << buffer_size << " bytes\n";
+        std::cout << "Iterations: " << iterations << "\n";
+        std::cout << "\n";
+        
+        MemoryBenchmark benchmark;
+        MemoryBenchmark::Results results = benchmark.run(buffer_size, iterations);
+        MemoryBenchmark::print_results(results);
+        
+        return results.verification_passed ? EXIT_SUCCESS : EXIT_FAILURE;
+    } else {
+        std::cout << "Benchmarking framework initialized.\n";
+        std::cout << "Use --help to see usage information.\n";
+        std::cout << "\n";
+        return EXIT_SUCCESS;
+    }
 }
 
