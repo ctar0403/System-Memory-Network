@@ -17,13 +17,22 @@
 class MemoryBenchmark {
 public:
     /**
+     * Timing statistics structure for latency measurements.
+     */
+    struct TimingStats {
+        double min_latency_ns;
+        double max_latency_ns;
+        double avg_latency_ns;
+        double total_time_seconds;
+    };
+
+    /**
      * Results structure containing benchmark metrics.
      */
     struct Results {
         std::size_t buffer_size_bytes;
         std::size_t iterations;
-        double total_time_seconds;
-        double average_latency_nanoseconds;
+        TimingStats timing;
         double throughput_mbps;
         bool verification_passed;
         std::size_t verification_errors;
@@ -52,13 +61,15 @@ public:
 
 private:
     /**
-     * Performs a single read-write-read verification cycle.
+     * Performs a single read-write-read verification cycle and measures its latency.
      * 
      * @param buffer Pointer to the buffer
      * @param size Size of the buffer in bytes
+     * @param cycle_latency_ns Output parameter for cycle latency in nanoseconds
      * @return Number of verification errors (0 if all correct)
      */
-    std::size_t verify_cycle(std::uint8_t* buffer, std::size_t size) noexcept;
+    std::size_t verify_cycle(std::uint8_t* buffer, std::size_t size, 
+                             std::int64_t& cycle_latency_ns) noexcept;
 
     /**
      * Writes a pattern to the buffer.
