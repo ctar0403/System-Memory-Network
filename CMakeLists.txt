@@ -20,6 +20,7 @@ set(SOURCES
     src/timer.cpp
     src/memory_benchmark.cpp
     src/process_priority.cpp
+    src/network_benchmark.cpp
 )
 
 # Executable

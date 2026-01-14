@@ -1,0 +1,127 @@
+#ifndef NETWORK_BENCHMARK_H
+#define NETWORK_BENCHMARK_H
+
+#include <cstdint>
+#include <cstddef>
+#include <string>
+
+/**
+ * Network Benchmarking Module
+ * 
+ * Performs basic network timing measurements using standard sockets.
+ * Measures connection time, send/receive latency, and round-trip time.
+ * 
+ * Limitations:
+ * - Requires network connectivity
+ * - Requires a reachable target host/port
+ * - Results depend on network conditions
+ * - May fail if firewall blocks connections
+ * 
+ * Example usage:
+ *   NetworkBenchmark benchmark;
+ *   auto results = benchmark.run("127.0.0.1", 80, 1024);
+ */
+class NetworkBenchmark {
+public:
+    /**
+     * Network timing statistics.
+     */
+    struct TimingStats {
+        double connection_time_ms;
+        double send_time_ms;
+        double receive_time_ms;
+        double round_trip_time_ms;
+        bool connection_successful;
+        bool data_exchange_successful;
+    };
+
+    /**
+     * Results structure containing network benchmark metrics.
+     */
+    struct Results {
+        std::string target_host;
+        std::uint16_t target_port;
+        std::size_t payload_size_bytes;
+        TimingStats timing;
+        std::string error_message;
+        bool benchmark_successful;
+    };
+
+    /**
+     * Constructs a network benchmark instance.
+     */
+    NetworkBenchmark() noexcept;
+
+    /**
+     * Runs the network benchmark.
+     * 
+     * @param host Target hostname or IP address (e.g., "127.0.0.1" or "example.com")
+     * @param port Target port number
+     * @param payload_size_bytes Size of payload to send/receive (default: 1024)
+     * @return Results structure with benchmark metrics
+     */
+    Results run(const std::string& host, std::uint16_t port, 
+                std::size_t payload_size_bytes = 1024);
+
+    /**
+     * Prints network benchmark results in a clear table format.
+     * 
+     * @param results The benchmark results to print
+     */
+    static void print_results(const Results& results);
+
+    /**
+     * Compares network latency with memory timing.
+     * 
+     * @param network_results Network benchmark results
+     * @param memory_latency_ns Memory benchmark average latency in nanoseconds
+     */
+    static void print_comparison(const Results& network_results, 
+                                 double memory_latency_ns);
+
+private:
+    /**
+     * Creates a TCP socket and connects to the target.
+     * 
+     * @param host Target hostname or IP address
+     * @param port Target port number
+     * @param connection_time_ms Output parameter for connection time in milliseconds
+     * @return Socket file descriptor, or -1 on error
+     */
+    int connect_to_host(const std::string& host, std::uint16_t port,
+                       double& connection_time_ms) noexcept;
+
+    /**
+     * Sends data over a socket.
+     * 
+     * @param socket_fd Socket file descriptor
+     * @param data Pointer to data to send
+     * @param size Size of data in bytes
+     * @param send_time_ms Output parameter for send time in milliseconds
+     * @return Number of bytes sent, or -1 on error
+     */
+    std::ssize_t send_data(int socket_fd, const void* data, std::size_t size,
+                           double& send_time_ms) noexcept;
+
+    /**
+     * Receives data from a socket.
+     * 
+     * @param socket_fd Socket file descriptor
+     * @param buffer Buffer to receive data into
+     * @param size Size of buffer in bytes
+     * @param receive_time_ms Output parameter for receive time in milliseconds
+     * @return Number of bytes received, or -1 on error
+     */
+    std::ssize_t receive_data(int socket_fd, void* buffer, std::size_t size,
+                              double& receive_time_ms) noexcept;
+
+    /**
+     * Closes a socket.
+     * 
+     * @param socket_fd Socket file descriptor to close
+     */
+    void close_socket(int socket_fd) noexcept;
+};
+
+#endif // NETWORK_BENCHMARK_H
+

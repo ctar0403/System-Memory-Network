@@ -13,6 +13,7 @@
 #include "timer.h"
 #include "memory_benchmark.h"
 #include "process_priority.h"
+#include "network_benchmark.h"
 
 /**
  * System Benchmarking Tool
@@ -30,11 +31,14 @@
  * Options:
  *   --buffer-size SIZE    Buffer size in bytes (default: 1048576 = 1MB)
  *   --iterations COUNT    Number of iterations (default: 1000)
+ *   --network-host HOST   Run network benchmark (hostname or IP)
+ *   --network-port PORT   Network benchmark port (default: 80)
  *   --help                Show this help message
  * 
  * Examples:
  *   ./SystemBenchmark --buffer-size 1048576 --iterations 10000
  *   ./SystemBenchmark --buffer-size 10485760 --iterations 1000000
+ *   ./SystemBenchmark --network-host 127.0.0.1 --network-port 80
  * 
  * For Android (cross-compilation):
  *   cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/android.toolchain.cmake ..
@@ -98,16 +102,20 @@ namespace {
     
     void print_usage(const char* program_name) {
         std::cout << "Usage: " << program_name 
-                  << " [--buffer-size SIZE] [--iterations COUNT] [--help]\n";
+                  << " [--buffer-size SIZE] [--iterations COUNT] "
+                  << "[--network-host HOST] [--network-port PORT] [--help]\n";
         std::cout << "\n";
         std::cout << "Options:\n";
         std::cout << "  --buffer-size SIZE    Buffer size in bytes (default: 1048576 = 1MB)\n";
         std::cout << "  --iterations COUNT    Number of iterations (default: 1000)\n";
+        std::cout << "  --network-host HOST   Run network benchmark (hostname or IP)\n";
+        std::cout << "  --network-port PORT   Network benchmark port (default: 80)\n";
         std::cout << "  --help                Show this help message\n";
         std::cout << "\n";
         std::cout << "Examples:\n";
         std::cout << "  " << program_name << " --buffer-size 1048576 --iterations 10000\n";
         std::cout << "  " << program_name << " --buffer-size 10485760 --iterations 1000000\n";
+        std::cout << "  " << program_name << " --network-host 127.0.0.1 --network-port 80\n";
         std::cout << "\n";
     }
     
@@ -133,6 +141,9 @@ int main(int argc, char* argv[]) {
     std::size_t buffer_size = 1048576;  // 1 MB
     std::size_t iterations = 1000;
     bool run_benchmark = false;
+    bool run_network_benchmark = false;
+    std::string network_host;
+    std::uint16_t network_port = 80;
     
     // Parse command line arguments
     for (int i = 1; i < argc; ++i) {
@@ -154,6 +165,21 @@ int main(int argc, char* argv[]) {
                 return EXIT_FAILURE;
             }
             run_benchmark = true;
+        } else if (arg == "--network-host" && i + 1 < argc) {
+            network_host = argv[++i];
+            run_network_benchmark = true;
+        } else if (arg == "--network-port" && i + 1 < argc) {
+            try {
+                unsigned long port_value = std::stoul(argv[++i]);
+                if (port_value == 0 || port_value > 65535) {
+                    std::cerr << "Error: Port must be between 1 and 65535\n";
+                    return EXIT_FAILURE;
+                }
+                network_port = static_cast<std::uint16_t>(port_value);
+            } catch (const std::exception& e) {
+                std::cerr << "Error: Invalid port number: " << argv[i] << "\n";
+                return EXIT_FAILURE;
+            }
         } else {
             std::cerr << "Error: Unknown option: " << arg << "\n";
             std::cerr << "Use --help for usage information.\n";
@@ -185,7 +211,8 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "\n";
     
-    // Run memory benchmark if parameters provided, otherwise show help
+    // Run memory benchmark if parameters provided
+    double memory_latency_ns = 0.0;
     if (run_benchmark) {
         std::cout << "Running RAM Benchmark...\n";
         std::cout << "Buffer Size: " << buffer_size << " bytes\n";
@@ -196,12 +223,47 @@ int main(int argc, char* argv[]) {
         MemoryBenchmark::Results results = benchmark.run(buffer_size, iterations);
         MemoryBenchmark::print_results(results);
         
-        return results.verification_passed ? EXIT_SUCCESS : EXIT_FAILURE;
-    } else {
+        memory_latency_ns = results.timing.avg_latency_ns;
+        
+        if (!results.verification_passed) {
+            return EXIT_FAILURE;
+        }
+    }
+    
+    // Run network benchmark if requested
+    if (run_network_benchmark) {
+        if (network_host.empty()) {
+            std::cerr << "Error: --network-host requires a hostname or IP address\n";
+            return EXIT_FAILURE;
+        }
+        
+        std::cout << "Running Network Benchmark...\n";
+        std::cout << "Target: " << network_host << ":" << network_port << "\n";
+        std::cout << "\n";
+        
+        NetworkBenchmark network_benchmark;
+        NetworkBenchmark::Results network_results = network_benchmark.run(
+            network_host, network_port, 1024);
+        NetworkBenchmark::print_results(network_results);
+        
+        // Print comparison if memory benchmark was also run
+        if (run_benchmark && memory_latency_ns > 0.0) {
+            NetworkBenchmark::print_comparison(network_results, memory_latency_ns);
+        }
+        
+        if (!network_results.benchmark_successful) {
+            std::cerr << "Warning: Network benchmark failed. "
+                      << "This may be due to network connectivity issues, "
+                      << "firewall rules, or the target server not accepting connections.\n";
+        }
+    }
+    
+    if (!run_benchmark && !run_network_benchmark) {
         std::cout << "Benchmarking framework initialized.\n";
         std::cout << "Use --help to see usage information.\n";
         std::cout << "\n";
-        return EXIT_SUCCESS;
     }
+    
+    return EXIT_SUCCESS;
 }
 
