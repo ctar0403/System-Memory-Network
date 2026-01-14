@@ -12,6 +12,7 @@
 
 #include "timer.h"
 #include "memory_benchmark.h"
+#include "process_priority.h"
 
 /**
  * System Benchmarking Tool
@@ -162,6 +163,27 @@ int main(int argc, char* argv[]) {
     
     print_banner();
     print_environment_info();
+    
+    // Attempt to raise process priority (best-effort, non-blocking)
+    ProcessPriority priority;
+    std::int32_t initial_priority = priority.get_current_priority();
+    ProcessPriority::Result priority_result = priority.attempt_raise();
+    std::int32_t final_priority = priority.get_current_priority();
+    
+    std::cout << "Process Priority:\n";
+    std::cout << "  Initial Priority: " << initial_priority << " (nice value)\n";
+    std::cout << "  Priority Adjustment: " 
+              << ProcessPriority::result_to_string(priority_result) << "\n";
+    std::cout << "  Final Priority: " << final_priority << " (nice value)\n";
+    
+    if (priority_result == ProcessPriority::Result::Success) {
+        std::cout << "  Note: Process priority raised for better benchmark accuracy.\n";
+    } else if (priority_result == ProcessPriority::Result::InsufficientPrivs) {
+        std::cout << "  Note: Running with default priority (requires root for higher priority).\n";
+    } else if (priority_result == ProcessPriority::Result::NotSupported) {
+        std::cout << "  Note: Priority adjustment not supported on this platform.\n";
+    }
+    std::cout << "\n";
     
     // Run memory benchmark if parameters provided, otherwise show help
     if (run_benchmark) {
