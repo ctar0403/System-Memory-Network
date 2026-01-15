@@ -5,6 +5,13 @@
 #include <cstddef>
 #include <string>
 
+#ifdef __linux__
+#include <sys/types.h>  // Provides ssize_t on POSIX systems
+#else
+// Fallback for non-POSIX systems (functions won't be used anyway)
+typedef long ssize_t;
+#endif
+
 /**
  * Network Benchmarking Module
  * 
@@ -100,8 +107,8 @@ private:
      * @param send_time_ms Output parameter for send time in milliseconds
      * @return Number of bytes sent, or -1 on error
      */
-    std::ssize_t send_data(int socket_fd, const void* data, std::size_t size,
-                           double& send_time_ms) noexcept;
+    ssize_t send_data(int socket_fd, const void* data, std::size_t size,
+                      double& send_time_ms) noexcept;
 
     /**
      * Receives data from a socket.
@@ -112,8 +119,8 @@ private:
      * @param receive_time_ms Output parameter for receive time in milliseconds
      * @return Number of bytes received, or -1 on error
      */
-    std::ssize_t receive_data(int socket_fd, void* buffer, std::size_t size,
-                              double& receive_time_ms) noexcept;
+    ssize_t receive_data(int socket_fd, void* buffer, std::size_t size,
+                         double& receive_time_ms) noexcept;
 
     /**
      * Closes a socket.

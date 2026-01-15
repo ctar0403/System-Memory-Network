@@ -66,8 +66,8 @@ NetworkBenchmark::Results NetworkBenchmark::run(
 
     // Send data
     double send_time_ms = 0.0;
-    std::ssize_t bytes_sent = send_data(socket_fd, send_buffer.data(), 
-                                        payload_size_bytes, send_time_ms);
+    ssize_t bytes_sent = send_data(socket_fd, send_buffer.data(), 
+                                    payload_size_bytes, send_time_ms);
     
     if (bytes_sent < 0 || static_cast<std::size_t>(bytes_sent) != payload_size_bytes) {
         results.error_message = "Failed to send data completely";
@@ -80,8 +80,8 @@ NetworkBenchmark::Results NetworkBenchmark::run(
     // Receive data (if server echoes back)
     // Note: Most servers won't echo data, so this may fail - that's OK
     double receive_time_ms = 0.0;
-    std::ssize_t bytes_received = receive_data(socket_fd, recv_buffer.data(),
-                                               payload_size_bytes, receive_time_ms);
+    ssize_t bytes_received = receive_data(socket_fd, recv_buffer.data(),
+                                          payload_size_bytes, receive_time_ms);
     
     double round_trip_time_ms = round_trip_timer.elapsed_milliseconds();
     
@@ -321,7 +321,7 @@ int NetworkBenchmark::connect_to_host(
 #endif
 }
 
-std::ssize_t NetworkBenchmark::send_data(
+ssize_t NetworkBenchmark::send_data(
     int socket_fd,
     const void* data,
     std::size_t size,
@@ -331,11 +331,11 @@ std::ssize_t NetworkBenchmark::send_data(
     Timer send_timer;
     send_timer.start();
 
-    std::ssize_t total_sent = 0;
+    ssize_t total_sent = 0;
     const std::uint8_t* data_ptr = static_cast<const std::uint8_t*>(data);
     
-    while (total_sent < static_cast<std::ssize_t>(size)) {
-        std::ssize_t bytes_sent = send(socket_fd, 
+    while (total_sent < static_cast<ssize_t>(size)) {
+        ssize_t bytes_sent = send(socket_fd, 
                                       data_ptr + total_sent,
                                       size - total_sent,
                                       0);
@@ -362,7 +362,7 @@ std::ssize_t NetworkBenchmark::send_data(
 #endif
 }
 
-std::ssize_t NetworkBenchmark::receive_data(
+ssize_t NetworkBenchmark::receive_data(
     int socket_fd,
     void* buffer,
     std::size_t size,
@@ -372,7 +372,7 @@ std::ssize_t NetworkBenchmark::receive_data(
     Timer receive_timer;
     receive_timer.start();
 
-    std::ssize_t total_received = 0;
+    ssize_t total_received = 0;
     std::uint8_t* buffer_ptr = static_cast<std::uint8_t*>(buffer);
     
     // Set a timeout for receive
@@ -381,8 +381,8 @@ std::ssize_t NetworkBenchmark::receive_data(
     timeout.tv_usec = 0;
     setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     
-    while (total_received < static_cast<std::ssize_t>(size)) {
-        std::ssize_t bytes_received = recv(socket_fd,
+    while (total_received < static_cast<ssize_t>(size)) {
+        ssize_t bytes_received = recv(socket_fd,
                                            buffer_ptr + total_received,
                                            size - total_received,
                                            0);
