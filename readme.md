@@ -1,215 +1,182 @@
-Project Title
+# System Memory & Network Performance Measurement Engine
 
-System Memory and Network Performance Measurement Engine (C/C++)
+A user-space C/C++ performance measurement tool designed to benchmark RAM behavior and compare device-side processing time with real network latency. This tool focuses on measurement, timing, and validation, not hardware modification.
 
-Project Goal
+The tool is intended as a proof-of-concept / demo engine that can be extended for further experimentation.
 
-Build a C/C++ system-level measurement tool that benchmarks RAM read/write behavior and compares device-side processing time with real network latency. The tool is designed as a demo and analysis engine, not a hardware modification system.
+## Table of Contents
 
-Target Environment
+- [Features](#features)
+- [Non-Goals](#non-goals)
+- [Supported Platforms](#supported-platforms)
+- [Build Requirements](#build-requirements)
+- [Build Instructions](#build-instructions)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Design Principles](#design-principles)
+- [Status](#status)
+- [License](#license)
 
-OS: Unix-like (Linux / Android preferred)
+## Features
 
-Language: Standard C / C++ (portable, warning-clean)
+- **RAM read / write / read verification** - Comprehensive memory benchmarking
+- **High-resolution timing and throughput measurement** - Nanosecond-precision timing
+- **Structured result tables** - Latency, size, and iteration count metrics
+- **Best-effort process prioritization** - Within OS limits
+- **Network loop measurements** - Connection open and round-trip latency
+- **Clean, portable, standards-compliant C++** - C++17 standard
 
-Execution: User-space application
+## Non-Goals
 
-Build: Makefile or CMake
+**Important:** This project does not:
 
-No kernel or bootloader modification
+- ❌ Modify CPU frequency
+- ❌ Increase physical RAM
+- ❌ Access hardware pins or chips directly
+- ❌ Modify bootloader or kernel
+- ❌ Perform compression-based memory expansion
 
-Core Features (Phase 1)
-1. Memory Read/Write/Compare Engine
+All measurements are performed in user space, within OS and API constraints.
 
-Allocate a configurable RAM buffer
+## Supported Platforms
 
-Perform repeated read–write–read cycles (e.g. up to 10M iterations)
+- ✅ **Linux** (Ubuntu recommended)
+- ✅ **Android** (user-space only)
+- ⚠️ **macOS / Windows** (development only; Linux recommended for testing)
 
-Validate data correctness byte-by-byte
+## Build Requirements
 
-Measure:
+- CMake ≥ 3.10
+- GCC or Clang (with C++17 support)
+- POSIX-compatible system
 
-Total execution time
+### Install Dependencies on Ubuntu
 
-Average latency per iteration
+```bash
+sudo apt update
+sudo apt install -y build-essential cmake clang
+```
 
-Throughput (MB/s)
+## Build Instructions
 
-Store results in internal tables (arrays or structs)
+```bash
+git clone <repository-url>
+cd <project-directory>
 
-2. Timing & Table Generation
+mkdir build
+cd build
+cmake ..
+make -j
+```
 
-Use high-resolution timers (monotonic clock)
+The build should complete without warnings or errors.
 
-Record:
+**Alternative build method:**
 
-Buffer size
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build .
+```
 
-Iteration count
+**For cross-compilation (e.g., Android):**
 
-Min / max / average timings
+```bash
+cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/android.toolchain.cmake ..
+cmake --build .
+```
 
-Output results in structured form (table or CSV-style text)
+## Usage
 
-3. Resource Prioritization (Best Effort)
+### Basic Run
 
-Increase process priority where permitted
+```bash
+./SystemBenchmark
+```
 
-Reduce scheduling noise (single-threaded baseline)
+### Command-Line Options
 
-No claims of exclusive hardware control
+```bash
+./SystemBenchmark [OPTIONS]
+```
 
-Log environment constraints clearly
+**Available Options:**
 
-4. Network Loop & Call Timing Measurement
+- `--buffer-size SIZE` - Buffer size in bytes (default: 1048576 = 1MB)
+- `--iterations COUNT` - Number of iterations (default: 1000)
+- `--network-host HOST` - Run network benchmark (hostname or IP)
+- `--network-port PORT` - Network benchmark port (default: 80)
+- `--help` - Show help message
 
-Implement a simple network loop:
+### Examples
 
-Open connection
+```bash
+# Basic memory benchmark
+./SystemBenchmark
 
-Send small payload
+# Custom buffer size and iterations
+./SystemBenchmark --buffer-size 1048576 --iterations 10000
 
-Receive response
+# Large buffer test
+./SystemBenchmark --buffer-size 10485760 --iterations 1000000
 
-Close connection
+# Network benchmark
+./SystemBenchmark --network-host 127.0.0.1 --network-port 80
 
-Measure:
+# Combined memory and network benchmark
+./SystemBenchmark --buffer-size 1048576 --iterations 10000 --network-host example.com --network-port 80
+```
 
-Call open time (target ~0.2s observation)
+### Output
 
-Round-trip latency
+The tool provides:
 
-Compare network delay vs CPU memory timing
+- RAM timing statistics
+- Verification results
+- Network latency comparison (if enabled)
+- Platform information
+- Timer resolution measurements
 
-Support WAN / Wi-Fi where available via standard APIs
+## Project Structure
 
-5. Demo Output
+```
+.
+├── CMakeLists.txt
+├── README.md
+├── include/
+│   ├── timer.h
+│   ├── memory_benchmark.h
+│   ├── network_benchmark.h
+│   └── process_priority.h
+├── src/
+│   ├── main.cpp
+│   ├── timer.cpp
+│   ├── memory_benchmark.cpp
+│   ├── network_benchmark.cpp
+│   └── process_priority.cpp
+└── build/          # Build directory (created during build)
+```
 
-Console-based output is sufficient
+## Design Principles
 
-Show:
+- **Clarity over cleverness** - Readable and maintainable code
+- **Portable, standard-compliant C++** - C++17 standard
+- **No undefined behavior** - Strict compiler warnings enabled
+- **Repeatable and explainable measurements** - Consistent benchmarking methodology
+- **Clean handoff to other engineers** - Well-documented and structured
 
-Memory benchmark results
+## Status
 
-Network timing results
+- ✅ **Milestone 1:** Project setup and timing utilities
+- ✅ **Milestone 2:** Memory benchmarking
+- ✅ **Milestone 3:** Result tables and stability metrics
+- ✅ **Milestone 4:** Resource prioritization
+- ✅ **Milestone 5:** Network timing loop
 
-Ratio of CPU vs network latency
+## License
 
-Output must be readable and repeatable
+To be defined.
 
-Non-Goals (Explicit)
+## Notes
 
-No CPU frequency changes
-
-No physical RAM expansion
-
-No pin-level hardware access
-
-No bootloader or kernel modification
-
-No compression-based memory tricks
-
-Milestones (for AI Agent Execution)
-Milestone 1 – Project Setup
-
-Tasks
-
-Create project structure
-
-Add build system
-
-Implement main entry point
-
-Implement timer utility
-
-Output
-
-Compiling empty tool
-
-Clean warnings
-
-Milestone 2 – Memory Benchmark
-
-Tasks
-
-Allocate RAM buffer
-
-Implement read/write/read loop
-
-Add timing
-
-Validate data integrity
-
-Output
-
-Timing results printed
-
-Stable, repeatable measurements
-
-Milestone 3 – Tables & Optimization
-
-Tasks
-
-Store results in structs
-
-Add averaging and summary stats
-
-Apply best-effort process prioritization
-
-Output
-
-Structured output tables
-
-Cleaner timing results
-
-Milestone 4 – Network Measurement
-
-Tasks
-
-Implement connection open/close loop
-
-Measure latency and throughput
-
-Compare with memory timings
-
-Output
-
-CPU vs network timing comparison
-
-Milestone 5 – Final Demo & Cleanup
-
-Tasks
-
-Clean code
-
-Add usage instructions
-
-Final test run
-
-Output
-
-Demo-ready binary
-
-Simple documentation
-
-Acceptance Criteria
-
-Compiles cleanly with strict warnings
-
-Runs without crashes or leaks
-
-Produces consistent timing data
-
-Results are explainable and reproducible
-
-Scope matches user-space OS limits
-
-Notes for Code AI Agent
-
-Prefer clarity over cleverness
-
-Avoid undefined behavior
-
-Log assumptions clearly
-
-Keep math simple and verifiable
+This project is intended for analysis and demonstration purposes. Any performance improvements observed are the result of measurement and optimization, not hardware alteration.
