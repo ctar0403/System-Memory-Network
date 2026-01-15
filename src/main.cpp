@@ -94,6 +94,7 @@ namespace {
         for (int i = 0; i < 1000; ++i) {
             dummy += i;
         }
+        (void)dummy;  // Suppress unused variable warning
         double elapsed = timer.elapsed_nanoseconds();
         std::cout << "Timer Resolution: ~" << elapsed << " ns (test measurement)\n";
         
