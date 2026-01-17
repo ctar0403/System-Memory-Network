@@ -20,6 +20,7 @@ The tool is intended as a proof-of-concept / demo engine that can be extended fo
 ## Features
 
 - **RAM read / write / read verification** - Comprehensive memory benchmarking
+- **CPU computational workload testing** - Integer, floating-point, and memory operations
 - **High-resolution timing and throughput measurement** - Nanosecond-precision timing
 - **Structured result tables** - Latency, size, and iteration count metrics
 - **Best-effort process prioritization** - Within OS limits
@@ -104,6 +105,7 @@ cmake --build .
 
 - `--buffer-size SIZE` - Buffer size in bytes (default: 1048576 = 1MB)
 - `--iterations COUNT` - Number of iterations (default: 1000)
+- `--cpu-iterations COUNT` - Run CPU benchmark with COUNT iterations
 - `--network-host HOST` - Run network benchmark (hostname or IP)
 - `--network-port PORT` - Network benchmark port (default: 80)
 - `--help` - Show help message
@@ -120,6 +122,9 @@ cmake --build .
 # Large buffer test
 ./SystemBenchmark --buffer-size 10485760 --iterations 1000000
 
+# CPU benchmark
+./SystemBenchmark --cpu-iterations 1000000
+
 # Network benchmark
 ./SystemBenchmark --network-host 127.0.0.1 --network-port 80
 
@@ -131,8 +136,8 @@ cmake --build .
 
 The tool provides:
 
-- RAM timing statistics
-- Verification results
+- RAM timing statistics and verification results
+- CPU computational performance metrics
 - Network latency comparison (if enabled)
 - Platform information
 - Timer resolution measurements
@@ -146,12 +151,14 @@ The tool provides:
 ├── include/
 │   ├── timer.h
 │   ├── memory_benchmark.h
+│   ├── cpu_benchmark.h
 │   ├── network_benchmark.h
 │   └── process_priority.h
 ├── src/
 │   ├── main.cpp
 │   ├── timer.cpp
 │   ├── memory_benchmark.cpp
+│   ├── cpu_benchmark.cpp
 │   ├── network_benchmark.cpp
 │   └── process_priority.cpp
 └── build/          # Build directory (created during build)
@@ -169,9 +176,10 @@ The tool provides:
 
 - ✅ **Milestone 1:** Project setup and timing utilities
 - ✅ **Milestone 2:** Memory benchmarking
-- ✅ **Milestone 3:** Result tables and stability metrics
-- ✅ **Milestone 4:** Resource prioritization
-- ✅ **Milestone 5:** Network timing loop
+- ✅ **Milestone 3:** CPU computational benchmarking
+- ✅ **Milestone 4:** Result tables and stability metrics
+- ✅ **Milestone 5:** Resource prioritization
+- ✅ **Milestone 6:** Network timing loop
 
 ## License
 

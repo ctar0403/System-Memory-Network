@@ -21,6 +21,7 @@ set(SOURCES
     src/memory_benchmark.cpp
     src/process_priority.cpp
     src/network_benchmark.cpp
+    src/cpu_benchmark.cpp
 )
 
 # Executable

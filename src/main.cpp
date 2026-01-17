@@ -14,6 +14,7 @@
 #include "memory_benchmark.h"
 #include "process_priority.h"
 #include "network_benchmark.h"
+#include "cpu_benchmark.h"
 
 /**
  * System Benchmarking Tool
@@ -31,6 +32,7 @@
  * Options:
  *   --buffer-size SIZE    Buffer size in bytes (default: 1048576 = 1MB)
  *   --iterations COUNT    Number of iterations (default: 1000)
+ *   --cpu-iterations COUNT Run CPU benchmark with COUNT iterations
  *   --network-host HOST   Run network benchmark (hostname or IP)
  *   --network-port PORT   Network benchmark port (default: 80)
  *   --help                Show this help message
@@ -38,6 +40,7 @@
  * Examples:
  *   ./SystemBenchmark --buffer-size 1048576 --iterations 10000
  *   ./SystemBenchmark --buffer-size 10485760 --iterations 1000000
+ *   ./SystemBenchmark --cpu-iterations 1000000
  *   ./SystemBenchmark --network-host 127.0.0.1 --network-port 80
  * 
  * For Android (cross-compilation):
@@ -142,6 +145,8 @@ int main(int argc, char* argv[]) {
     std::size_t buffer_size = 1048576;  // 1 MB
     std::size_t iterations = 1000;
     bool run_benchmark = false;
+    bool run_cpu_benchmark = false;
+    std::size_t cpu_iterations = 100000;
     bool run_network_benchmark = false;
     std::string network_host;
     std::uint16_t network_port = 80;
@@ -166,6 +171,12 @@ int main(int argc, char* argv[]) {
                 return EXIT_FAILURE;
             }
             run_benchmark = true;
+        } else if (arg == "--cpu-iterations" && i + 1 < argc) {
+            cpu_iterations = parse_size_t(argv[++i], "--cpu-iterations");
+            if (cpu_iterations == 0) {
+                return EXIT_FAILURE;
+            }
+            run_cpu_benchmark = true;
         } else if (arg == "--network-host" && i + 1 < argc) {
             network_host = argv[++i];
             run_network_benchmark = true;
@@ -230,7 +241,22 @@ int main(int argc, char* argv[]) {
             return EXIT_FAILURE;
         }
     }
-    
+
+    // Run CPU benchmark if requested
+    if (run_cpu_benchmark) {
+        std::cout << "Running CPU Benchmark...\n";
+        std::cout << "Iterations: " << cpu_iterations << "\n";
+        std::cout << "\n";
+
+        CpuBenchmark cpu_benchmark;
+        CpuBenchmark::Results cpu_results = cpu_benchmark.run(cpu_iterations);
+        CpuBenchmark::print_results(cpu_results);
+
+        if (!cpu_results.benchmark_successful) {
+            std::cerr << "Warning: CPU benchmark failed to complete.\n";
+        }
+    }
+
     // Run network benchmark if requested
     if (run_network_benchmark) {
         if (network_host.empty()) {
@@ -259,7 +285,7 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    if (!run_benchmark && !run_network_benchmark) {
+    if (!run_benchmark && !run_cpu_benchmark && !run_network_benchmark) {
         std::cout << "Benchmarking framework initialized.\n";
         std::cout << "Use --help to see usage information.\n";
         std::cout << "\n";
