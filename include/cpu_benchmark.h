@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <string>
 
 /**
  * CPU Benchmarking Module
