@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <cstdlib>
 #include <ctime>
 #include <cstring>
@@ -35,6 +36,8 @@
  *   --cpu-iterations COUNT Run CPU benchmark with COUNT iterations
  *   --network-host HOST   Run network benchmark (hostname or IP)
  *   --network-port PORT   Network benchmark port (default: 80)
+ *   --continuous-runs COUNT Run benchmark in continuous mode for COUNT runs
+ *   --continuous-duration SEC Run benchmark in continuous mode for SEC seconds
  *   --help                Show this help message
  * 
  * Examples:
@@ -114,6 +117,8 @@ namespace {
         std::cout << "  --iterations COUNT    Number of iterations (default: 1000)\n";
         std::cout << "  --network-host HOST   Run network benchmark (hostname or IP)\n";
         std::cout << "  --network-port PORT   Network benchmark port (default: 80)\n";
+        std::cout << "  --continuous-runs COUNT Run benchmark in continuous mode for COUNT runs\n";
+        std::cout << "  --continuous-duration SEC Run benchmark in continuous mode for SEC seconds\n";
         std::cout << "  --help                Show this help message\n";
         std::cout << "\n";
         std::cout << "Examples:\n";
@@ -150,6 +155,9 @@ int main(int argc, char* argv[]) {
     bool run_network_benchmark = false;
     std::string network_host;
     std::uint16_t network_port = 80;
+    bool continuous_mode = false;
+    std::size_t continuous_runs = 0;
+    double continuous_duration = 0.0;
     
     // Parse command line arguments
     for (int i = 1; i < argc; ++i) {
@@ -192,6 +200,26 @@ int main(int argc, char* argv[]) {
                 std::cerr << "Error: Invalid port number: " << argv[i] << "\n";
                 return EXIT_FAILURE;
             }
+        } else if (arg == "--continuous-runs" && i + 1 < argc) {
+            continuous_runs = parse_size_t(argv[++i], "--continuous-runs");
+            if (continuous_runs == 0) {
+                return EXIT_FAILURE;
+            }
+            continuous_mode = true;
+            run_benchmark = true;
+        } else if (arg == "--continuous-duration" && i + 1 < argc) {
+            try {
+                continuous_duration = std::stod(argv[++i]);
+                if (continuous_duration <= 0.0) {
+                    std::cerr << "Error: Continuous duration must be greater than 0\n";
+                    return EXIT_FAILURE;
+                }
+                continuous_mode = true;
+                run_benchmark = true;
+            } catch (const std::exception& e) {
+                std::cerr << "Error: Invalid duration value: " << argv[i] << "\n";
+                return EXIT_FAILURE;
+            }
         } else {
             std::cerr << "Error: Unknown option: " << arg << "\n";
             std::cerr << "Use --help for usage information.\n";
@@ -208,31 +236,54 @@ int main(int argc, char* argv[]) {
     ProcessPriority::Result priority_result = priority.attempt_raise();
     std::int32_t final_priority = priority.get_current_priority();
     
-    std::cout << "Process Priority:\n";
+    std::cout << "Process Priority (Best-Effort):\n";
     std::cout << "  Initial Priority: " << initial_priority << " (nice value)\n";
     std::cout << "  Priority Adjustment: " 
               << ProcessPriority::result_to_string(priority_result) << "\n";
     std::cout << "  Final Priority: " << final_priority << " (nice value)\n";
     
     if (priority_result == ProcessPriority::Result::Success) {
-        std::cout << "  Note: Process priority raised for better benchmark accuracy.\n";
+        std::cout << "  Status: SUCCESS - Process priority raised for better benchmark accuracy.\n";
     } else if (priority_result == ProcessPriority::Result::InsufficientPrivs) {
-        std::cout << "  Note: Running with default priority (requires root for higher priority).\n";
+        std::cout << "  Status: INSUFFICIENT PRIVILEGES - Running with default priority.\n";
+        std::cout << "  Note: Root privileges required for higher priority (this is normal).\n";
     } else if (priority_result == ProcessPriority::Result::NotSupported) {
-        std::cout << "  Note: Priority adjustment not supported on this platform.\n";
+        std::cout << "  Status: NOT SUPPORTED - Priority adjustment not available on this platform.\n";
+    } else {
+        std::cout << "  Status: ERROR - Priority adjustment failed.\n";
     }
     std::cout << "\n";
     
     // Run memory benchmark if parameters provided
     double memory_latency_ns = 0.0;
     if (run_benchmark) {
-        std::cout << "Running RAM Benchmark...\n";
-        std::cout << "Buffer Size: " << buffer_size << " bytes\n";
-        std::cout << "Iterations: " << iterations << "\n";
-        std::cout << "\n";
-        
         MemoryBenchmark benchmark;
-        MemoryBenchmark::Results results = benchmark.run(buffer_size, iterations);
+        MemoryBenchmark::Results results;
+        
+        if (continuous_mode) {
+            std::cout << "Running RAM Benchmark (Continuous/Stability Mode)...\n";
+            std::cout << "Buffer Size: " << buffer_size << " bytes\n";
+            std::cout << "Iterations per Run: " << iterations << "\n";
+            if (continuous_runs > 0) {
+                std::cout << "Mode: Continuous for " << continuous_runs << " runs\n";
+            } else if (continuous_duration > 0.0) {
+                std::cout << "Mode: Continuous for " << std::fixed << std::setprecision(2) 
+                          << continuous_duration << " seconds\n";
+            }
+            std::cout << "Note: Tracking consistency and variance across runs.\n";
+            std::cout << "\n";
+            
+            results = benchmark.run_continuous(buffer_size, iterations, 
+                                              continuous_runs, continuous_duration);
+        } else {
+            std::cout << "Running RAM Benchmark (Single Run Mode)...\n";
+            std::cout << "Buffer Size: " << buffer_size << " bytes\n";
+            std::cout << "Iterations: " << iterations << "\n";
+            std::cout << "\n";
+            
+            results = benchmark.run(buffer_size, iterations);
+        }
+        
         MemoryBenchmark::print_results(results);
         
         memory_latency_ns = results.timing.avg_latency_ns;
