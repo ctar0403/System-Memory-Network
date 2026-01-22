@@ -66,7 +66,7 @@ MemoryBenchmark::Results MemoryBenchmark::run_with_buffer(
 
     for (std::size_t i = 0; i < iterations; ++i) {
         std::int64_t cycle_latency_ns = 0;
-        std::size_t errors = verify_cycle(buffer.data(), buffer_size_bytes, 
+        std::size_t errors = verify_cycle(buffer, buffer_size_bytes, 
                                           cycle_latency_ns);
         total_errors += errors;
 
