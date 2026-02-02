@@ -7,6 +7,8 @@
 #include <cstring>
 #include <cerrno>
 #include <cstddef>
+#include <limits>
+#include <algorithm>
 
 #ifdef __linux__
 #include <sys/socket.h>
@@ -29,6 +31,7 @@ NetworkBenchmark::Results NetworkBenchmark::run(
     results.target_host = host;
     results.target_port = port;
     results.payload_size_bytes = payload_size_bytes;
+    results.iterations = 1;
     results.benchmark_successful = false;
     results.timing.connection_successful = false;
     results.timing.data_exchange_successful = false;
@@ -36,6 +39,9 @@ NetworkBenchmark::Results NetworkBenchmark::run(
     results.timing.send_time_ms = 0.0;
     results.timing.receive_time_ms = 0.0;
     results.timing.round_trip_time_ms = 0.0;
+    results.timing.avg_connection_time_ms = 0.0;
+    results.timing.min_connection_time_ms = 0.0;
+    results.timing.max_connection_time_ms = 0.0;
 
 #ifdef __linux__
     // Attempt to connect
@@ -49,6 +55,9 @@ NetworkBenchmark::Results NetworkBenchmark::run(
     }
     
     results.timing.connection_time_ms = connection_time_ms;
+    results.timing.avg_connection_time_ms = connection_time_ms;
+    results.timing.min_connection_time_ms = connection_time_ms;
+    results.timing.max_connection_time_ms = connection_time_ms;
     results.timing.connection_successful = true;
 
     // Prepare payload data
@@ -110,6 +119,82 @@ NetworkBenchmark::Results NetworkBenchmark::run(
     return results;
 }
 
+NetworkBenchmark::Results NetworkBenchmark::run_call_loop(
+    const std::string& host,
+    std::uint16_t port,
+    std::size_t iterations,
+    std::size_t payload_size_bytes
+) {
+    Results results{};
+    results.target_host = host;
+    results.target_port = port;
+    results.payload_size_bytes = payload_size_bytes;
+    results.iterations = iterations;
+    results.benchmark_successful = false;
+    results.timing.connection_successful = false;
+    results.timing.data_exchange_successful = false;
+    results.timing.connection_time_ms = 0.0;
+    results.timing.send_time_ms = 0.0;
+    results.timing.receive_time_ms = 0.0;
+    results.timing.round_trip_time_ms = 0.0;
+    results.timing.avg_connection_time_ms = 0.0;
+    results.timing.min_connection_time_ms = 0.0;
+    results.timing.max_connection_time_ms = 0.0;
+
+#ifdef __linux__
+    std::vector<double> connection_times;
+    connection_times.reserve(iterations);
+    
+    std::size_t successful_connections = 0;
+    double total_connection_time = 0.0;
+    double min_time = std::numeric_limits<double>::max();
+    double max_time = 0.0;
+    
+    std::cout << "Performing " << iterations << " connection cycles...\n";
+    
+    for (std::size_t i = 0; i < iterations; ++i) {
+        double cycle_time = 0.0;
+        bool success = single_connection_cycle(host, port, payload_size_bytes, cycle_time);
+        
+        if (success) {
+            successful_connections++;
+            connection_times.push_back(cycle_time);
+            total_connection_time += cycle_time;
+            min_time = std::min(min_time, cycle_time);
+            max_time = std::max(max_time, cycle_time);
+        }
+        
+        // Progress indicator for long runs
+        if (iterations > 10 && (i + 1) % (iterations / 10) == 0) {
+            std::cout << "  Progress: " << ((i + 1) * 100 / iterations) << "%\n";
+        }
+    }
+    
+    if (successful_connections > 0) {
+        results.timing.connection_successful = true;
+        results.timing.data_exchange_successful = true;
+        results.benchmark_successful = true;
+        
+        results.timing.avg_connection_time_ms = total_connection_time / successful_connections;
+        results.timing.min_connection_time_ms = min_time;
+        results.timing.max_connection_time_ms = max_time;
+        results.timing.connection_time_ms = results.timing.avg_connection_time_ms;
+        results.timing.round_trip_time_ms = results.timing.avg_connection_time_ms;
+        
+        std::cout << "Completed " << successful_connections << "/" << iterations 
+                  << " connection cycles successfully.\n";
+    } else {
+        results.error_message = "All connection attempts failed";
+        std::cout << "All connection attempts failed.\n";
+    }
+#else
+    results.error_message = "Network benchmarking not supported on this platform";
+    results.timing.connection_successful = false;
+#endif
+
+    return results;
+}
+
 void NetworkBenchmark::print_results(const Results& results) {
     std::cout << "\n";
     std::cout << "========================================\n";
@@ -129,6 +214,10 @@ void NetworkBenchmark::print_results(const Results& results) {
         std::cout << std::fixed << std::setprecision(2) 
                   << (results.payload_size_bytes / 1024.0) << " KB\n";
     }
+    if (results.iterations > 1) {
+        std::cout << "  " << std::left << std::setw(25) << "Iterations:"
+                  << results.iterations << "\n";
+    }
     std::cout << "\n";
 
     std::cout << "Connection Status:\n";
@@ -145,9 +234,21 @@ void NetworkBenchmark::print_results(const Results& results) {
 
     if (results.timing.connection_successful) {
         std::cout << "Timing Statistics:\n";
-        std::cout << "  " << std::left << std::setw(25) << "Connection Time:"
-                  << std::fixed << std::setprecision(3) 
-                  << results.timing.connection_time_ms << " ms\n";
+        if (results.iterations > 1) {
+            std::cout << "  " << std::left << std::setw(25) << "Avg Connection Time:"
+                      << std::fixed << std::setprecision(3) 
+                      << results.timing.avg_connection_time_ms << " ms\n";
+            std::cout << "  " << std::left << std::setw(25) << "Min Connection Time:"
+                      << std::fixed << std::setprecision(3) 
+                      << results.timing.min_connection_time_ms << " ms\n";
+            std::cout << "  " << std::left << std::setw(25) << "Max Connection Time:"
+                      << std::fixed << std::setprecision(3) 
+                      << results.timing.max_connection_time_ms << " ms\n";
+        } else {
+            std::cout << "  " << std::left << std::setw(25) << "Connection Time:"
+                      << std::fixed << std::setprecision(3) 
+                      << results.timing.connection_time_ms << " ms\n";
+        }
         
         if (results.benchmark_successful) {
             std::cout << "  " << std::left << std::setw(25) << "Send Time:"
@@ -238,6 +339,52 @@ void NetworkBenchmark::print_comparison(
             std::cout << "  " << std::left << std::setw(30) << "Network/Memory Ratio:"
                       << std::fixed << std::setprecision(2) 
                       << ratio << "x\n";
+        }
+    }
+    std::cout << "\n";
+}
+
+void NetworkBenchmark::print_cpu_comparison(
+    const Results& network_results,
+    double cpu_time_per_op_ns
+) {
+    if (!network_results.benchmark_successful || cpu_time_per_op_ns <= 0.0) {
+        return;
+    }
+
+    std::cout << "========================================\n";
+    std::cout << "  Network vs CPU Performance Comparison\n";
+    std::cout << "========================================\n";
+    std::cout << "\n";
+
+    double cpu_time_ms = cpu_time_per_op_ns / 1'000'000.0;
+    double network_time_ms = network_results.timing.avg_connection_time_ms > 0.0 ?
+                             network_results.timing.avg_connection_time_ms :
+                             network_results.timing.connection_time_ms;
+    
+    std::cout << "Performance Comparison:\n";
+    std::cout << "  " << std::left << std::setw(30) << "CPU Time per Operation:"
+              << std::fixed << std::setprecision(6) 
+              << cpu_time_ms << " ms\n";
+    
+    std::cout << "  " << std::left << std::setw(30) << "Network Connection Time:"
+              << std::fixed << std::setprecision(3) 
+              << network_time_ms << " ms\n";
+    
+    if (cpu_time_ms > 0.0) {
+        double ratio = network_time_ms / cpu_time_ms;
+        std::cout << "  " << std::left << std::setw(30) << "Network/CPU Ratio:"
+                  << std::fixed << std::setprecision(2) 
+                  << ratio << "x\n";
+        
+        if (ratio > 1000.0) {
+            std::cout << "  Note: Network operations are " 
+                      << std::fixed << std::setprecision(1) 
+                      << (ratio / 1000.0) << "K times slower than CPU operations\n";
+        } else if (ratio > 1.0) {
+            std::cout << "  Note: Network operations are " 
+                      << std::fixed << std::setprecision(1) 
+                      << ratio << " times slower than CPU operations\n";
         }
     }
     
@@ -421,6 +568,44 @@ void NetworkBenchmark::close_socket(int socket_fd) noexcept {
     }
 #else
     (void)socket_fd;
+#endif
+}
+
+bool NetworkBenchmark::single_connection_cycle(
+    const std::string& host,
+    std::uint16_t port,
+    std::size_t payload_size_bytes,
+    double& connection_time_ms
+) noexcept {
+#ifdef __linux__
+    Timer cycle_timer;
+    cycle_timer.start();
+    
+    double connect_time = 0.0;
+    int socket_fd = connect_to_host(host, port, connect_time);
+    
+    if (socket_fd < 0) {
+        connection_time_ms = 0.0;
+        return false;
+    }
+    
+    // Send small payload
+    std::vector<std::uint8_t> send_buffer(payload_size_bytes, 0xAA);
+    double send_time = 0.0;
+    ssize_t bytes_sent = send_data(socket_fd, send_buffer.data(), 
+                                   payload_size_bytes, send_time);
+    
+    close_socket(socket_fd);
+    
+    connection_time_ms = cycle_timer.elapsed_milliseconds();
+    
+    return (bytes_sent > 0);
+#else
+    (void)host;
+    (void)port;
+    (void)payload_size_bytes;
+    connection_time_ms = 0.0;
+    return false;
 #endif
 }
 

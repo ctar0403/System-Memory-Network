@@ -38,6 +38,9 @@ public:
         double send_time_ms;
         double receive_time_ms;
         double round_trip_time_ms;
+        double avg_connection_time_ms;
+        double min_connection_time_ms;
+        double max_connection_time_ms;
         bool connection_successful;
         bool data_exchange_successful;
     };
@@ -49,6 +52,7 @@ public:
         std::string target_host;
         std::uint16_t target_port;
         std::size_t payload_size_bytes;
+        std::size_t iterations;
         TimingStats timing;
         std::string error_message;
         bool benchmark_successful;
@@ -71,6 +75,20 @@ public:
                 std::size_t payload_size_bytes = 1024);
 
     /**
+     * Runs the network benchmark with call-like loop behavior.
+     * Performs repeated open/close cycles to simulate call behavior.
+     * 
+     * @param host Target hostname or IP address
+     * @param port Target port number
+     * @param iterations Number of connection cycles to perform
+     * @param payload_size_bytes Size of payload to send/receive (default: 1024)
+     * @return Results structure with benchmark metrics
+     */
+    Results run_call_loop(const std::string& host, std::uint16_t port,
+                          std::size_t iterations,
+                          std::size_t payload_size_bytes = 1024);
+
+    /**
      * Prints network benchmark results in a clear table format.
      * 
      * @param results The benchmark results to print
@@ -85,6 +103,15 @@ public:
      */
     static void print_comparison(const Results& network_results, 
                                  double memory_latency_ns);
+
+    /**
+     * Compares network latency with CPU timing.
+     * 
+     * @param network_results Network benchmark results
+     * @param cpu_time_per_op_ns CPU benchmark time per operation in nanoseconds
+     */
+    static void print_cpu_comparison(const Results& network_results,
+                                     double cpu_time_per_op_ns);
 
 private:
     /**
@@ -128,6 +155,19 @@ private:
      * @param socket_fd Socket file descriptor to close
      */
     void close_socket(int socket_fd) noexcept;
+
+    /**
+     * Performs a single connection cycle and measures timing.
+     * 
+     * @param host Target hostname or IP address
+     * @param port Target port number
+     * @param payload_size_bytes Size of payload to send/receive
+     * @param connection_time_ms Output parameter for connection time
+     * @return true if connection cycle was successful
+     */
+    bool single_connection_cycle(const std::string& host, std::uint16_t port,
+                                 std::size_t payload_size_bytes,
+                                 double& connection_time_ms) noexcept;
 };
 
 #endif // NETWORK_BENCHMARK_H

@@ -36,6 +36,7 @@
  *   --cpu-iterations COUNT Run CPU benchmark with COUNT iterations
  *   --network-host HOST   Run network benchmark (hostname or IP)
  *   --network-port PORT   Network benchmark port (default: 80)
+ *   --network-iterations COUNT Network benchmark iterations (default: 1)
  *   --continuous-runs COUNT Run benchmark in continuous mode for COUNT runs
  *   --continuous-duration SEC Run benchmark in continuous mode for SEC seconds
  *   --help                Show this help message
@@ -45,6 +46,7 @@
  *   ./SystemBenchmark --buffer-size 10485760 --iterations 1000000
  *   ./SystemBenchmark --cpu-iterations 1000000
  *   ./SystemBenchmark --network-host 127.0.0.1 --network-port 80
+ *   ./SystemBenchmark --network-host example.com --network-iterations 10
  * 
  * For Android (cross-compilation):
  *   cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/android.toolchain.cmake ..
@@ -117,6 +119,7 @@ namespace {
         std::cout << "  --iterations COUNT    Number of iterations (default: 1000)\n";
         std::cout << "  --network-host HOST   Run network benchmark (hostname or IP)\n";
         std::cout << "  --network-port PORT   Network benchmark port (default: 80)\n";
+        std::cout << "  --network-iterations COUNT Network benchmark iterations (default: 1)\n";
         std::cout << "  --continuous-runs COUNT Run benchmark in continuous mode for COUNT runs\n";
         std::cout << "  --continuous-duration SEC Run benchmark in continuous mode for SEC seconds\n";
         std::cout << "  --help                Show this help message\n";
@@ -125,6 +128,8 @@ namespace {
         std::cout << "  " << program_name << " --buffer-size 1048576 --iterations 10000\n";
         std::cout << "  " << program_name << " --buffer-size 10485760 --iterations 1000000\n";
         std::cout << "  " << program_name << " --network-host 127.0.0.1 --network-port 80\n";
+        std::cout << "  " << program_name << " --network-host example.com --network-iterations 10\n";
+        std::cout << "  " << program_name << " --buffer-size 1048576 --iterations 1000 --network-host 127.0.0.1\n";
         std::cout << "\n";
     }
     
@@ -155,6 +160,7 @@ int main(int argc, char* argv[]) {
     bool run_network_benchmark = false;
     std::string network_host;
     std::uint16_t network_port = 80;
+    std::size_t network_iterations = 1;
     bool continuous_mode = false;
     std::size_t continuous_runs = 0;
     double continuous_duration = 0.0;
@@ -198,6 +204,11 @@ int main(int argc, char* argv[]) {
                 network_port = static_cast<std::uint16_t>(port_value);
             } catch (const std::exception& e) {
                 std::cerr << "Error: Invalid port number: " << argv[i] << "\n";
+                return EXIT_FAILURE;
+            }
+        } else if (arg == "--network-iterations" && i + 1 < argc) {
+            network_iterations = parse_size_t(argv[++i], "--network-iterations");
+            if (network_iterations == 0) {
                 return EXIT_FAILURE;
             }
         } else if (arg == "--continuous-runs" && i + 1 < argc) {
@@ -293,7 +304,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Run CPU benchmark if requested
+    // Run network benchmark if requested
+    double cpu_time_per_op_ns = 0.0;
     if (run_cpu_benchmark) {
         std::cout << "Running CPU Benchmark...\n";
         std::cout << "Iterations: " << cpu_iterations << "\n";
@@ -302,6 +314,8 @@ int main(int argc, char* argv[]) {
         CpuBenchmark cpu_benchmark;
         CpuBenchmark::Results cpu_results = cpu_benchmark.run(cpu_iterations);
         CpuBenchmark::print_results(cpu_results);
+        
+        cpu_time_per_op_ns = cpu_results.timing.time_per_operation_ns;
 
         if (!cpu_results.benchmark_successful) {
             std::cerr << "Warning: CPU benchmark failed to complete.\n";
@@ -317,16 +331,31 @@ int main(int argc, char* argv[]) {
         
         std::cout << "Running Network Benchmark...\n";
         std::cout << "Target: " << network_host << ":" << network_port << "\n";
+        if (network_iterations > 1) {
+            std::cout << "Iterations: " << network_iterations << " (call-like loop)\n";
+        }
         std::cout << "\n";
         
         NetworkBenchmark network_benchmark;
-        NetworkBenchmark::Results network_results = network_benchmark.run(
-            network_host, network_port, 1024);
+        NetworkBenchmark::Results network_results;
+        
+        if (network_iterations > 1) {
+            network_results = network_benchmark.run_call_loop(
+                network_host, network_port, network_iterations, 1024);
+        } else {
+            network_results = network_benchmark.run(
+                network_host, network_port, 1024);
+        }
+        
         NetworkBenchmark::print_results(network_results);
         
-        // Print comparison if memory benchmark was also run
+        // Print comparisons if other benchmarks were also run
         if (run_benchmark && memory_latency_ns > 0.0) {
             NetworkBenchmark::print_comparison(network_results, memory_latency_ns);
+        }
+        
+        if (run_cpu_benchmark && cpu_time_per_op_ns > 0.0) {
+            NetworkBenchmark::print_cpu_comparison(network_results, cpu_time_per_op_ns);
         }
         
         if (!network_results.benchmark_successful) {
