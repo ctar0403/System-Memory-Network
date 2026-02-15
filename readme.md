@@ -1,190 +1,136 @@
-# System Memory & Network Performance Measurement Engine
+# System Performance Benchmark
 
-A user-space C/C++ performance measurement tool designed to benchmark RAM behavior and compare device-side processing time with real network latency. This tool focuses on measurement, timing, and validation, not hardware modification.
-
-The tool is intended as a proof-of-concept / demo engine that can be extended for further experimentation.
-
-## Table of Contents
-
-- [Features](#features)
-- [Non-Goals](#non-goals)
-- [Supported Platforms](#supported-platforms)
-- [Build Requirements](#build-requirements)
-- [Build Instructions](#build-instructions)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Design Principles](#design-principles)
-- [Status](#status)
-- [License](#license)
+A portable C++17 benchmarking suite for measuring memory, CPU, and network performance in user space.
 
 ## Features
 
-- **RAM read / write / read verification** - Comprehensive memory benchmarking
-- **CPU computational workload testing** - Integer, floating-point, and memory operations
-- **High-resolution timing and throughput measurement** - Nanosecond-precision timing
-- **Structured result tables** - Latency, size, and iteration count metrics
-- **Best-effort process prioritization** - Within OS limits
-- **Network loop measurements** - Connection open and round-trip latency
-- **Clean, portable, standards-compliant C++** - C++17 standard
-
-## Non-Goals
-
-**Important:** This project does not:
-
-- ❌ Modify CPU frequency
-- ❌ Increase physical RAM
-- ❌ Access hardware pins or chips directly
-- ❌ Modify bootloader or kernel
-- ❌ Perform compression-based memory expansion
-
-All measurements are performed in user space, within OS and API constraints.
-
-## Supported Platforms
-
-- ✅ **Linux** (Ubuntu recommended)
-- ✅ **Android** (user-space only)
-- ⚠️ **macOS / Windows** (development only; Linux recommended for testing)
-
-## Build Requirements
-
-- CMake ≥ 3.10
-- GCC or Clang (with C++17 support)
-- POSIX-compatible system
-
-### Install Dependencies on Ubuntu
-
-```bash
-sudo apt update
-sudo apt install -y build-essential cmake clang
-```
-
-## Build Instructions
-
-```bash
-git clone <repository-url>
-cd <project-directory>
-
-mkdir build
-cd build
-cmake ..
-make -j
-```
-
-The build should complete without warnings or errors.
-
-**Alternative build method:**
-
-```bash
-mkdir build && cd build
-cmake ..
-cmake --build .
-```
-
-**For cross-compilation (e.g., Android):**
-
-```bash
-cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/android.toolchain.cmake ..
-cmake --build .
-```
-
-## Usage
-
-### Basic Run
-
-```bash
-./SystemBenchmark
-```
-
-### Command-Line Options
-
-```bash
-./SystemBenchmark [OPTIONS]
-```
-
-**Available Options:**
-
-- `--buffer-size SIZE` - Buffer size in bytes (default: 1048576 = 1MB)
-- `--iterations COUNT` - Number of iterations (default: 1000)
-- `--cpu-iterations COUNT` - Run CPU benchmark with COUNT iterations
-- `--network-host HOST` - Run network benchmark (hostname or IP)
-- `--network-port PORT` - Network benchmark port (default: 80)
-- `--help` - Show help message
-
-### Examples
-
-```bash
-# Basic memory benchmark
-./SystemBenchmark
-
-# Custom buffer size and iterations
-./SystemBenchmark --buffer-size 1048576 --iterations 10000
-
-# Large buffer test
-./SystemBenchmark --buffer-size 10485760 --iterations 1000000
-
-# CPU benchmark
-./SystemBenchmark --cpu-iterations 1000000
-
-# Network benchmark
-./SystemBenchmark --network-host 127.0.0.1 --network-port 80
-
-# Combined memory and network benchmark
-./SystemBenchmark --buffer-size 1048576 --iterations 10000 --network-host example.com --network-port 80
-```
-
-### Output
-
-The tool provides:
-
-- RAM timing statistics and verification results
-- CPU computational performance metrics
-- Network latency comparison (if enabled)
-- Platform information
-- Timer resolution measurements
+- **Memory Benchmark**: RAM read/write/verify with latency statistics
+- **CPU Benchmark**: Computational performance testing (integer, float, memory ops)
+- **Network Benchmark**: Connection timing and round-trip latency (Linux only)
+- **High-Resolution Timing**: Nanosecond-precision measurements
+- **Cross-Platform**: Linux, macOS, iOS (core library)
 
 ## Project Structure
 
 ```
-.
-├── CMakeLists.txt
-├── README.md
-├── include/
-│   ├── timer.h
-│   ├── memory_benchmark.h
-│   ├── cpu_benchmark.h
-│   ├── network_benchmark.h
-│   └── process_priority.h
-├── src/
-│   ├── main.cpp
-│   ├── timer.cpp
-│   ├── memory_benchmark.cpp
-│   ├── cpu_benchmark.cpp
-│   ├── network_benchmark.cpp
-│   └── process_priority.cpp
-└── build/          # Build directory (created during build)
+core/                   # Portable benchmark library (iOS-compatible)
+├── include/           # Public headers
+└── src/               # Implementation
+
+platform/cli/          # Linux CLI application
+├── main.cpp          # Entry point
+├── network_benchmark.* # POSIX network timing
+└── process_priority.*  # Linux process priority
+
+docs/                  # Documentation
+└── iOS_INTEGRATION.md # iOS integration guide
 ```
 
-## Design Principles
+## Build Instructions
 
-- **Clarity over cleverness** - Readable and maintainable code
-- **Portable, standard-compliant C++** - C++17 standard
-- **No undefined behavior** - Strict compiler warnings enabled
-- **Repeatable and explainable measurements** - Consistent benchmarking methodology
-- **Clean handoff to other engineers** - Well-documented and structured
+### Linux/Ubuntu
 
-## Status
+```bash
+# Install dependencies
+sudo apt install build-essential cmake
 
-- ✅ **Milestone 1:** Project setup and timing utilities
-- ✅ **Milestone 2:** Memory benchmarking
-- ✅ **Milestone 3:** CPU computational benchmarking
-- ✅ **Milestone 4:** Result tables and stability metrics
-- ✅ **Milestone 5:** Resource prioritization
-- ✅ **Milestone 6:** Network timing loop
+# Build
+mkdir build && cd build
+cmake ..
+make -j
+
+# Run
+./platform/cli/SystemBenchmark --help
+```
+
+### macOS
+
+```bash
+brew install cmake
+mkdir build && cd build
+cmake ..
+make -j
+./platform/cli/SystemBenchmark
+```
+
+### iOS
+
+See `docs/iOS_INTEGRATION.md` for Xcode integration instructions.
+
+## Usage
+
+```bash
+# Memory benchmark (1MB buffer, 1000 iterations)
+./SystemBenchmark --buffer-size 1048576 --iterations 1000
+
+# CPU benchmark
+./SystemBenchmark --cpu-iterations 100000
+
+# Network benchmark (Linux only)
+./SystemBenchmark --network-host 127.0.0.1 --network-port 80 --network-iterations 10
+
+# Combined test
+./SystemBenchmark --buffer-size 1048576 --iterations 1000 --cpu-iterations 100000
+```
+
+## Demo Mode
+
+For mobile or quick testing, use demo defaults:
+
+```cpp
+#include "demo_config.h"
+#include "memory_benchmark.h"
+
+MemoryBenchmark bench;
+auto results = bench.run(
+    DemoConfig::DEMO_BUFFER_SIZE,    // 1 MB
+    DemoConfig::DEMO_ITERATIONS       // 100 iterations
+);
+```
+
+## API Example
+
+```cpp
+#include "memory_benchmark.h"
+#include "cpu_benchmark.h"
+
+// Memory benchmark
+MemoryBenchmark mem_bench;
+auto mem_results = mem_bench.run(1024 * 1024, 1000);
+
+std::cout << "Avg Latency: " << mem_results.timing.avg_latency_ns << " ns\n";
+std::cout << "Throughput: " << mem_results.throughput_mbps << " MB/s\n";
+
+// CPU benchmark
+CpuBenchmark cpu_bench;
+auto cpu_results = cpu_bench.run(100000);
+
+std::cout << "Ops/Second: " << cpu_results.timing.operations_per_second << "\n";
+```
+
+## Platform Support
+
+| Feature | Linux | macOS | iOS |
+|---------|-------|-------|-----|
+| Memory Benchmark | ✓ | ✓ | ✓ |
+| CPU Benchmark | ✓ | ✓ | ✓ |
+| Network Benchmark | ✓ | Limited | ✗ |
+| Process Priority | ✓ | Limited | ✗ |
+
+## Requirements
+
+- C++17 compiler (GCC 7+, Clang 5+, Apple Clang 10+)
+- CMake 3.10+
+- POSIX system (for CLI platform)
+
+## Limitations
+
+This tool performs measurements in user space only:
+- Does not modify hardware settings
+- Does not require root/elevated privileges
+- Does not bypass OS security
+- Results vary by system load and hardware
 
 ## License
 
 To be defined.
-
-## Notes
-
-This project is intended for analysis and demonstration purposes. Any performance improvements observed are the result of measurement and optimization, not hardware alteration.

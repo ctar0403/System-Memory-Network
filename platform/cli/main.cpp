@@ -1,3 +1,10 @@
+/**
+ * main.cpp - System benchmark CLI application
+ * 
+ * Command-line interface for running memory, CPU, and network benchmarks.
+ * Supports single-run and continuous stability testing modes.
+ */
+
 #include <iostream>
 #include <iomanip>
 #include <cstdlib>
@@ -17,44 +24,8 @@
 #include "network_benchmark.h"
 #include "cpu_benchmark.h"
 
-/**
- * System Benchmarking Tool
- * 
- * A portable user-space benchmarking utility for Unix-like systems.
- * 
- * Build Instructions:
- *   mkdir build && cd build
- *   cmake ..
- *   cmake --build .
- * 
- * Run Instructions:
- *   ./SystemBenchmark [--buffer-size SIZE] [--iterations COUNT]
- * 
- * Options:
- *   --buffer-size SIZE    Buffer size in bytes (default: 1048576 = 1MB)
- *   --iterations COUNT    Number of iterations (default: 1000)
- *   --cpu-iterations COUNT Run CPU benchmark with COUNT iterations
- *   --network-host HOST   Run network benchmark (hostname or IP)
- *   --network-port PORT   Network benchmark port (default: 80)
- *   --network-iterations COUNT Network benchmark iterations (default: 1)
- *   --continuous-runs COUNT Run benchmark in continuous mode for COUNT runs
- *   --continuous-duration SEC Run benchmark in continuous mode for SEC seconds
- *   --help                Show this help message
- * 
- * Examples:
- *   ./SystemBenchmark --buffer-size 1048576 --iterations 10000
- *   ./SystemBenchmark --buffer-size 10485760 --iterations 1000000
- *   ./SystemBenchmark --cpu-iterations 1000000
- *   ./SystemBenchmark --network-host 127.0.0.1 --network-port 80
- *   ./SystemBenchmark --network-host example.com --network-iterations 10
- * 
- * For Android (cross-compilation):
- *   cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/android.toolchain.cmake ..
- *   cmake --build .
- */
-
 namespace {
-    const char* VERSION = "1.0.0";
+    constexpr const char* VERSION = "1.0.0";
     
     void print_banner() {
         std::cout << "========================================\n";

@@ -1,3 +1,10 @@
+/**
+ * network_benchmark.h - Network latency measurement (Linux/POSIX)
+ * 
+ * Measures TCP connection time, send/receive latency, and round-trip time.
+ * Requires POSIX sockets - not available on iOS.
+ */
+
 #ifndef NETWORK_BENCHMARK_H
 #define NETWORK_BENCHMARK_H
 

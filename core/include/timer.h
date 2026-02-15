@@ -1,3 +1,10 @@
+/**
+ * timer.h - High-resolution monotonic timer
+ * 
+ * Provides portable nanosecond-precision timing using std::chrono.
+ * Suitable for performance benchmarking across platforms.
+ */
+
 #ifndef TIMER_H
 #define TIMER_H
 

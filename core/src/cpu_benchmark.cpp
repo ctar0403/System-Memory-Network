@@ -1,3 +1,10 @@
+/**
+ * cpu_benchmark.cpp - CPU benchmark implementation
+ * 
+ * Tests computational performance using integer, floating-point,
+ * and memory-bound operations.
+ */
+
 #include "cpu_benchmark.h"
 #include "timer.h"
 #include <iostream>

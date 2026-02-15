@@ -1,3 +1,7 @@
+/**
+ * timer.cpp - High-resolution timer implementation
+ */
+
 #include "timer.h"
 #include <chrono>
 

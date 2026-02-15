@@ -1,3 +1,9 @@
+/**
+ * memory_benchmark.cpp - RAM benchmark implementation
+ * 
+ * Performs read-write-verify cycles with statistical analysis.
+ */
+
 #include "memory_benchmark.h"
 #include "timer.h"
 #include <iostream>

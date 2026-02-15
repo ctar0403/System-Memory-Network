@@ -1,3 +1,7 @@
+/**
+ * process_priority.cpp - Process priority implementation
+ */
+
 #include "process_priority.h"
 
 #ifdef __linux__

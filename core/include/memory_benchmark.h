@@ -1,3 +1,10 @@
+/**
+ * memory_benchmark.h - RAM performance measurement
+ * 
+ * Measures memory read/write/verify performance with statistical analysis.
+ * Provides latency, throughput, and stability metrics.
+ */
+
 #ifndef MEMORY_BENCHMARK_H
 #define MEMORY_BENCHMARK_H
 

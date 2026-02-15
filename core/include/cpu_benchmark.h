@@ -1,3 +1,10 @@
+/**
+ * cpu_benchmark.h - CPU computational performance measurement
+ * 
+ * Tests integer, floating-point, and memory-bound operations.
+ * Measures operations per second and time per operation.
+ */
+
 #ifndef CPU_BENCHMARK_H
 #define CPU_BENCHMARK_H
 

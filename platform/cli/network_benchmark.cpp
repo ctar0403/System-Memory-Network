@@ -1,3 +1,7 @@
+/**
+ * network_benchmark.cpp - Network benchmark implementation
+ */
+
 #include "network_benchmark.h"
 #include "timer.h"
 #include <iostream>

@@ -1,3 +1,10 @@
+/**
+ * process_priority.h - Process priority adjustment (Linux)
+ * 
+ * Best-effort attempt to raise process priority for more consistent
+ * benchmark timing. Requires elevated privileges for full effect.
+ */
+
 #ifndef PROCESS_PRIORITY_H
 #define PROCESS_PRIORITY_H
 
